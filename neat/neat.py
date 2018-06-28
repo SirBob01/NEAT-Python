@@ -8,14 +8,20 @@ except ImportError:
     import pickle
 
 def sigmoid(x):
+	"""
+		Common activation function with a distinct S-Curve. It is 
+	often called by a neuron, taking the sum of the products of 
+	weights and activation values of its parent neurons.
+	"""
 	y = 1/(1+math.exp(-x))
 	return y
 
-def softmax(s):
-	s_e = [math.exp(i) for i in s]
-	return [i/sum(s_e) for i in s_e]
-
 def genomic_distance(g1, g2):
+	"""
+		Calculates the distance between two genomes. It is used
+	to group similar neural networks together under the same 
+	specie.
+	"""
 	e1 = g1.edges
 	e2 = g2.edges
 
@@ -47,6 +53,11 @@ def genomic_distance(g1, g2):
 		return 0
 
 def genomic_crossover(g1, g2):
+	"""
+		Breeds two genomes. Matching genes are inherited 
+	from the fitter parent, while disjoint genes from 
+	either parent are inherited by the child.
+	"""
 	new_edges = {}
 	new_nodes = {}
 
@@ -114,6 +125,10 @@ def genomic_crossover(g1, g2):
 
 
 class NeuralNetwork(object):
+	"""
+		Base class for a standard neural network used by
+	the NEAT algorithm.
+	"""
 	def __init__(self, inputs, outputs, fitness=0, cost=0):
 		self.nodes = dict() # id : [[*IN], [*OUT], activation, bias]
 		self.edges = dict() # edge : [weight, enabled, innovation]
@@ -128,16 +143,30 @@ class NeuralNetwork(object):
 		self.fitness = fitness
 
 	def generate(self):
+		"""
+			Generates a new neural network. Call on
+		object creation.
+		"""
 		for i in xrange(self.max_node):
 			self.nodes[i] = [[], [], 0, random.random()*random.choice([-5, 5])] # Initial activations
 
 	def is_input(self, node):
+		"""
+			Determines whether or not a node is an input.
+		"""
 		return node < self.inputs
 
 	def is_output(self, node):
+		"""
+			Determines whether or not a node is an output.
+		"""
 		return self.inputs <= node < self.inputs + self.outputs
 
 	def add_edge(self):
+		"""
+			Edge mutation adds a new connection between
+		existing neurons.
+		"""
 		# Select random nodes [i, j] such that:
 		# 	i != j
 		#	i is not an output
@@ -155,6 +184,10 @@ class NeuralNetwork(object):
 			self.nodes[i][1].append(j)
 
 	def add_node(self):
+		"""
+			Neural mutation adds a new node between two
+		connected nodes.
+		"""
 		if len(self.edges) == 0:
 			self.add_edge()
 			return
@@ -186,6 +219,10 @@ class NeuralNetwork(object):
 		self.max_node += 1
 
 	def shift_weight(self):
+		"""
+			Randomly mutate one of the neural network's
+		connection weights.
+		"""
 		if len(self.edges) == 0:
 			self.add_edge()
 			return
@@ -203,7 +240,9 @@ class NeuralNetwork(object):
 			self.edges[e][0] *= random.random()+0.5
 
 	def mutate(self):
-		# Randomly mutate the topology and weights of the genome
+		"""
+			Randomly mutate the topology and weights of the genome.
+		"""
 		ch = random.choice(xrange(3))
 		if ch == 0:
 			self.add_node()
@@ -213,9 +252,17 @@ class NeuralNetwork(object):
 			self.shift_weight()
 
 	def clone(self):
+		"""
+			Return a clone of a neural network.
+		"""
 		return copy.deepcopy(self)
 
 	def forward(self, inputs):
+		"""
+			Forward propagation allows the neural network
+		to perform tasks by calculating a set of outputs
+		from a set of inputs.
+		"""
 		if len(inputs) < self.inputs:
 			raise ValueError("Incorrect number of inputs.")
 		
@@ -243,6 +290,11 @@ class NeuralNetwork(object):
 
 
 class Brain(object):
+	"""
+		Base class for a 'brain' that begins with a designated 
+	population. Gradually evaluates, culls, breeds, and mutates 
+	neural networks.
+	"""
 	def __init__(self, inputs, outputs, max_fitness=-1, population=100, delta_threshold=0.7, initial_mutations=10, max_generations=-1):
 		self.species = {}
 		self.population = population
@@ -261,6 +313,10 @@ class Brain(object):
 		self.max_fitness = max_fitness
 
 	def generate(self):
+		"""
+			Generate a new population of neural networks. 
+		Call on object instantiation.
+		"""
 		for i in xrange(self.population):
 			g = NeuralNetwork(self.inputs, self.outputs)
 			g.generate()
@@ -269,9 +325,16 @@ class Brain(object):
 			self.classify_genome(g)
 
 	def get_population(self):
+		"""
+			Get the total population of neural networks.
+		"""
 		return sum([len(self.species[i]) for i in self.species])
 
 	def classify_genome(self, genome):
+		"""
+			Classify genomes according to their genomic distance.
+		Groups neural networks into species.
+		"""
 		if len(self.species) == 0:
 			self.species[0] = [genome]
 		else:
@@ -286,6 +349,11 @@ class Brain(object):
 				self.species[len(self.species)] = [genome]
 
 	def evolve(self):
+		"""
+			Takes the top 20% of the population based on their
+		individual fitness scores and discards the rest. System
+		is repopulated via breeding and random mutations.
+		"""
 		survivors = []
 		for s in self.species.values():
 			# Sort the networks according to their performance
@@ -323,6 +391,10 @@ class Brain(object):
 		self.generation += 1
 
 	def next_iteration(self):
+		"""
+			Used during neural network training. Call after
+		every evaluation of individual neural networks.
+		"""
 		if self.current_genome < len(self.species[self.current_species])-1:
 			self.current_genome += 1
 		else:
@@ -336,6 +408,9 @@ class Brain(object):
 				self.current_genome = 0
 
 	def get_fittest(self):
+		"""
+			Returns the maximum fitness for each specie.
+		"""
 		max_fitness_species = {}
 		for i in self.species:
 			self.species[i].sort(reverse=True, key=lambda genome: genome.fitness)
@@ -344,18 +419,31 @@ class Brain(object):
 		return max_fitness_species
 
 	def should_evolve(self):
+		"""
+			Determines whether or not the system should continue
+		learning or evolving.
+		"""
 		not_fit = all(i != self.max_fitness for i in self.get_fittest().values())
 		return not_fit and self.generation != self.max_generations
 
 	def get_current(self):
+		"""
+			Get the current genome for evaluation.
+		"""
 		return self.species[self.current_species][self.current_genome]
 
 	def save(self, filename):
+		"""
+			Save an instance of the brain to disk.
+		"""
 		with open(filename+'.neat', 'wb') as _out:
 			pickle.dump(self, _out, pickle.HIGHEST_PROTOCOL)
 
 	@staticmethod
 	def load(filename):
+		"""
+			Returns an instance of a brain from disk.
+		"""
 		with open(filename+'.neat', 'rb') as _in:
 			return pickle.load(_in)
 
