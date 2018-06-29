@@ -415,10 +415,11 @@ class Brain(object):
 		fitness_sums = self.adjusted_fitness()
 		global_fitness_sum = sum(fitness_sums.values())
 
-		# Restart if population has no progress
+		# Mutate the population if there is no progress
 		if global_fitness_sum == 0:
-			self.species = {}
-			self.generate()
+			for n in self.species:
+				for g in self.species[n]:
+					g.mutate()
 			self.generation += 1
 			return
 
@@ -520,3 +521,5 @@ class Brain(object):
 		"""
 		with open(filename+'.neat', 'rb') as _in:
 			return pickle.load(_in)
+
+
