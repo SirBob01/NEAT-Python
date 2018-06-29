@@ -47,7 +47,7 @@ def genomic_distance(g1, g2):
 		W = 0
 
 	if N > 0:
-		return abs(D/N + W)
+		return abs(D/N + W * 0.4)
 	else:
 		# They are equal because both genomes are empty
 		return 0
@@ -141,6 +141,7 @@ class NeuralNetwork(object):
 
 		# Determines the accuracy/feasibility of network
 		self.fitness = fitness
+		self.adjusted_fitness = 0
 
 	def generate(self):
 		"""
@@ -243,10 +244,10 @@ class NeuralNetwork(object):
 		"""
 			Randomly mutate the topology and weights of the genome.
 		"""
-		ch = random.choice(xrange(3))
-		if ch == 0:
+		ch = random.random()
+		if ch <= 0.3:
 			self.add_node()
-		elif ch == 1:
+		elif 0.3 < ch <= 0.8:
 			self.add_edge()
 		else:
 			self.shift_weight()
@@ -295,7 +296,12 @@ class Brain(object):
 	population. Gradually evaluates, culls, breeds, and mutates 
 	neural networks.
 	"""
-	def __init__(self, inputs, outputs, max_fitness=-1, population=100, delta_threshold=0.7, initial_mutations=10, max_generations=-1):
+	def __init__(self, inputs, outputs, 
+								max_fitness=-1, 
+								population=100, 
+								delta_threshold=1.0, 
+								initial_mutations=10, 
+								max_generations=-1):
 		self.species = {}
 		self.population = population
 
@@ -310,7 +316,9 @@ class Brain(object):
 
 		self.initial_mutations = initial_mutations
 		self.delta_threshold = delta_threshold
+
 		self.max_fitness = max_fitness
+		self.global_max_fitness = 0
 
 	def generate(self):
 		"""
@@ -326,7 +334,7 @@ class Brain(object):
 
 	def get_population(self):
 		"""
-			Get the total population of neural networks.
+			Returns the total population of neural networks.
 		"""
 		return sum([len(self.species[i]) for i in self.species])
 
@@ -347,45 +355,108 @@ class Brain(object):
 						return
 
 				self.species[len(self.species)] = [genome]
+				classified = True
+
+	def adjusted_fitness(self):
+		"""
+			Update the adjusted fitness values for each genome
+		as well as the total adjusted fitness for each specie.
+
+		Returns fitness sums.
+		"""
+		f = {}
+		for n in self.species:
+			s = self.species[n]
+			for g in s:
+				g.adjusted_fitness = g.fitness / len(s)
+
+			f[n] = float(sum([g.adjusted_fitness for g in s]))
+
+		return f
+
+	def cull_species(self, only_best):
+		"""
+			Eliminate the poorest genomes in a species.
+		"""
+		for n in self.species:
+			s = self.species[n]
+			s.sort(reverse=True, key=lambda genome : genome.fitness)
+
+			if only_best:
+				remaining = 1
+			else:
+				remaining = int(math.ceil(len(s)/2.0))
+			self.species[n] = s[:remaining]
+
+	def breed(self, specie):
+		"""
+			Returns a child as the mutation of either an existing
+		genome or the crossover between two parent genomes.
+		"""
+		if random.random() < 0.4 or len(specie) == 1:
+			child = random.choice(specie).clone()
+		else:
+			mom = random.choice(specie)
+			dad = random.choice([i for i in specie if i != mom])
+			child = genomic_crossover(mom, dad)
+		
+		child.mutate()
+		return child
 
 	def evolve(self):
 		"""
-			Takes the top 20% of the population based on their
+			Takes the top genomes of the population based on their
 		individual fitness scores and discards the rest. System
 		is repopulated via breeding and random mutations.
 		"""
-		survivors = []
-		for s in self.species.values():
-			# Sort the networks according to their performance
-			s.sort(reverse=True, key=lambda genome: genome.fitness)
-			top = s[0:int(math.ceil(len(s)/5.0))]
-			survivors.extend(top) # Keep the top 25%
+		# Exterminate weak species and genomes
+		self.cull_species(False)
 
-		if len(survivors) == 0:
-			for s in self.species.values():
-				survivors.extend(s)
+		fitness_sums = self.adjusted_fitness()
+		global_fitness_sum = sum(fitness_sums.values())
 
-		while len(survivors) < self.population:
-			mom = random.choice(survivors)
-			dad = random.choice(survivors)
-			if mom != dad:
-				# Mutate child
-				child = genomic_crossover(mom, dad)
-				child.mutate()
-				survivors.append(child)
-			else:
-				# Add random genome to prevent stagnation
-				# Allows us to achieve global minima in terms of cost
-				for s in self.species.values():
-					r = random.choice(s)
-					if r not in survivors:
-						r.mutate()
-						survivors.append(r)
+		# Restart if population has no progress
+		if global_fitness_sum == 0:
+			self.species = {}
+			self.generate()
+			self.generation += 1
+			return
 
-		# Exterminate and repopulate
-		self.species = {}
-		for i in survivors:
-			self.classify_genome(i)
+		# Eliminate poor performing species
+		survivors = {}
+		for n in self.species:
+			s = self.species[n]
+
+			breed = math.floor(fitness_sums[n]/float(global_fitness_sum) * self.population)
+			if breed > 0:
+				survivors[n] = self.species[n]
+		self.species = dict(zip(range(len(survivors)), survivors.values()))
+
+		# Update new fitness sums
+		fitness_sums = self.adjusted_fitness()
+		global_fitness_sum = sum(fitness_sums.values())
+
+		# Breed top genes
+		children = []
+		for n in self.species:
+			# Breed the genomes in each species, adding them to the next generation
+			s = self.species[n]
+
+			breed = math.floor(fitness_sums[n]/float(global_fitness_sum) * self.population) - 1
+			for i in range(int(breed)):
+				children.append(self.breed(s))
+
+		# Keep only the best
+		self.cull_species(True)
+
+		# Fill in the gap
+		while len(children) + self.get_population() < self.population:
+			s = random.choice(self.species.values())
+			children.append(self.breed(s))
+
+		# Repopulate
+		for g in children:
+			self.classify_genome(g)
 
 		# Increment generation
 		self.generation += 1
@@ -409,26 +480,29 @@ class Brain(object):
 
 	def get_fittest(self):
 		"""
-			Returns the maximum fitness for each specie.
+			Updates and returns the global maximum fitness.
 		"""
 		max_fitness_species = {}
 		for i in self.species:
 			self.species[i].sort(reverse=True, key=lambda genome: genome.fitness)
 			max_fitness_species[i] = self.species[i][0].fitness
 
-		return max_fitness_species
+		mfs = max(max_fitness_species.values())
+		if mfs > self.global_max_fitness:
+			self.global_max_fitness = mfs
+
+		return self.global_max_fitness
 
 	def should_evolve(self):
 		"""
 			Determines whether or not the system should continue
 		learning or evolving.
 		"""
-		not_fit = all(i != self.max_fitness for i in self.get_fittest().values())
-		return not_fit and self.generation != self.max_generations
+		return self.get_fittest() != self.max_fitness and self.generation != self.max_generations
 
 	def get_current(self):
 		"""
-			Get the current genome for evaluation.
+			Gets the current genome for evaluation.
 		"""
 		return self.species[self.current_species][self.current_genome]
 
@@ -446,5 +520,3 @@ class Brain(object):
 		"""
 		with open(filename+'.neat', 'rb') as _in:
 			return pickle.load(_in)
-
-
