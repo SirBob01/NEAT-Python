@@ -10,7 +10,7 @@ developed by Ken Stanley that applies genetic algorithms to machine learning.
 
 This implementation is a modified version of the algorithm written in Python.
 
-Original paper: http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
+[Here](http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf) is the original paper.
 
 # Dependencies
 
