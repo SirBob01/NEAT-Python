@@ -9,6 +9,7 @@ developed by Ken Stanley that applies genetic algorithms to machine learning.
 4. Breeds and mutates the best genomes over the course of generations
 
 This implementation is a modified version of the algorithm written in Python.
+
 Original paper: http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
 
 # Dependencies
@@ -33,14 +34,15 @@ In evaluating the genomes of a brain, you may use the following format:
 while brain.should_evolve():
     genome = brain.get_current()
     output = current.forward([0.3, 0.1, 0.25])
-    print output
+    
+    genome.fitness = some_function(output)
     
     brain.next_iteration() # Next genome to be evaluated
 ```
 
 The brain's `.should_evolve()` function determines whether or not to continue evaluating genomes based on the maximum number of generations or fitness score to be achieved.
 
-A genome's `.forward()` function takes a list of input values and produces a list of output values. These outputs may be evaluated and the `.fitness` score of this current genome may be updated.
+A genome's `.forward()` function takes a list of input values and produces a list of output values. These outputs may be evaluated by a fitness function and the `.fitness` score of this current genome may be updated.
 
 A brain and all its neural networks can be saved to disk and loaded. Files are automatically read and saved as `.neat` files.
 ```py
