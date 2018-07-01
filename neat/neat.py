@@ -3,9 +3,9 @@ import random
 import copy
 
 try:
-    import cPickle as pickle
+	import cPickle as pickle
 except ImportError:
-    import pickle
+	import pickle
 
 def sigmoid(x):
 	"""
@@ -197,6 +197,7 @@ class NeuralNetwork(object):
 		valid_edges = [i for i in self.edges.keys() if self.edges[i][1]]
 		if len(valid_edges) == 0:
 			return
+
 		e = random.choice(valid_edges)
 
 		# Add a new node
@@ -226,31 +227,28 @@ class NeuralNetwork(object):
 		"""
 		if len(self.edges) == 0:
 			self.add_edge()
-			return
 
 		# Pick a random edge-weight
 		e = random.choice(self.edges.keys())
 
 		# Shift one of the weights
-		ch = random.choice(xrange(3))
-		if ch == 0:
-			self.edges[e][0] *= -1
-		elif ch == 1:
-			self.edges[e][0] = random.random()*random.choice([-1, 1])
+		if random.random() > 0.3:
+			self.edges[e][0] += 0.3*random.choice([-1, 1]) # Perturb
+		elif 0.1 < random.random() <= 0.3:
+			self.edges[e][0] = random.random()*random.choice([-1, 1]) # Random
 		else:
-			self.edges[e][0] *= random.random()+0.5
+			self.edges[e][0] *= -1
 
 	def mutate(self):
 		"""
 			Randomly mutate the topology and weights of the genome.
 		"""
-		ch = random.random()
-		if ch <= 0.3:
-			self.add_node()
-		elif 0.3 < ch <= 0.8:
+		# Edge and node mutations are not mutually exclusive
+		if random.random() <= 0.8:
 			self.add_edge()
-		else:
-			self.shift_weight()
+		if random.random() <= 0.3:
+			self.add_node()
+		self.shift_weight()
 
 	def clone(self):
 		"""
@@ -299,8 +297,7 @@ class Brain(object):
 	def __init__(self, inputs, outputs, 
 								max_fitness=-1, 
 								population=100, 
-								delta_threshold=1.0, 
-								initial_mutations=10, 
+								delta_threshold=0.5,
 								max_generations=-1):
 		self.species = {}
 		self.population = population
@@ -314,7 +311,6 @@ class Brain(object):
 		self.inputs = inputs
 		self.outputs = outputs
 
-		self.initial_mutations = initial_mutations
 		self.delta_threshold = delta_threshold
 
 		self.max_fitness = max_fitness
@@ -328,8 +324,6 @@ class Brain(object):
 		for i in xrange(self.population):
 			g = NeuralNetwork(self.inputs, self.outputs)
 			g.generate()
-			for j in xrange(self.initial_mutations):
-				g.mutate()
 			self.classify_genome(g)
 
 	def get_population(self):
@@ -355,7 +349,6 @@ class Brain(object):
 						return
 
 				self.species[len(self.species)] = [genome]
-				classified = True
 
 	def adjusted_fitness(self):
 		"""
@@ -393,8 +386,9 @@ class Brain(object):
 			Returns a child as the mutation of either an existing
 		genome or the crossover between two parent genomes.
 		"""
-		if random.random() < 0.4 or len(specie) == 1:
+		if random.random() < 0.333 or len(specie) == 1:
 			child = random.choice(specie).clone()
+			child.fitness = 0
 		else:
 			mom = random.choice(specie)
 			dad = random.choice([i for i in specie if i != mom])
@@ -521,5 +515,3 @@ class Brain(object):
 		"""
 		with open(filename+'.neat', 'rb') as _in:
 			return pickle.load(_in)
-
-
