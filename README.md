@@ -35,7 +35,7 @@ while brain.should_evolve():
     genome = brain.get_current()
     output = current.forward([0.3, 0.1, 0.25])
     
-    genome.fitness = some_function(output)
+    genome.set_fitness(some_function(output))
     
     brain.next_iteration() # Next genome to be evaluated
 ```
