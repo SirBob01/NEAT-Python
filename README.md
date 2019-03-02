@@ -33,7 +33,7 @@ In evaluating the genomes of a brain, you may use the following format:
 ```py
 while brain.should_evolve():
     genome = brain.get_current()
-    output = current.forward([0.3, 0.1, 0.25])
+    output = genome.forward([0.3, 0.1, 0.25])
     
     genome.set_fitness(some_function(output))
     
