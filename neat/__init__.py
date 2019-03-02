@@ -11,4 +11,4 @@ games, or general machine learning problems.
 """
 __all__ = ['neat']
 
-__version__ = 'BETA 1.0'
+__version__ = 'BETA 2.0'
