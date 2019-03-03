@@ -42,7 +42,7 @@ while brain.should_evolve():
 
 The brain's `.should_evolve()` function determines whether or not to continue evaluating genomes based on the maximum number of generations or fitness score to be achieved.
 
-A genome's `.forward()` function takes a list of input values and produces a list of output values. These outputs may be evaluated by a fitness function and the `.fitness` score of this current genome may be updated.
+A genome's `.forward()` function takes a list of input values and produces a list of output values. These outputs may be evaluated by a fitness function and the fitness score of this current genome may be updated via the genome's `.set_fitness()` method.
 
 A brain and all its neural networks can be saved to disk and loaded. Files are automatically read and saved as `.neat` files.
 ```py
