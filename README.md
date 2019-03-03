@@ -54,4 +54,4 @@ Read NEAT's doc-strings for more information on the module's classes and methods
 
 # TODO
 - Modify the mutation probabilities (perhaps allow custom probabilities)
-- Fine tune genome parameters, such as the delta threshold
+- Fine tune population parameters, such as the delta threshold

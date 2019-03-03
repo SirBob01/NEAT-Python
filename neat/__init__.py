@@ -1,5 +1,4 @@
-"""
-	NEAT (NeuroEvolution of Augmenting Topologies) is a genetic algorithm 
+"""NEAT (NeuroEvolution of Augmenting Topologies) is a genetic algorithm 
 developed by Ken Stanley that applies genetic algorithms to machine learning.
 This algorithm gradually breeds and mutates the best genomes (neural networks)
 with the highest fitness or performance scores over the course of generations.
