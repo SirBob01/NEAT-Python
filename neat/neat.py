@@ -23,7 +23,7 @@ def genomic_distance(a, b):
 		if a._genes[i][0] in matching:
 			weight_diff += abs(a._genes[i][1]-b._genes[i][1])
 
-	return len(disjoint)/N + 0.4*weight_diff/len(matching)
+	return len(disjoint)/N + weight_diff/len(matching)
 
 def genomic_crossover(a, b):
 	"""Breed two genomes and return the child. Matching genes 
@@ -47,9 +47,9 @@ def genomic_crossover(a, b):
 	disjoint_a = [i for i in a._genes if i[0] in a_in - b_in]
 	disjoint_b = [i for i in b._genes if i[0] in b_in - a_in]
 
-	if a.get_fitness() > b.get_fitness():
+	if a._fitness > b._fitness:
 		child._genes.extend(disjoint_a)
-	elif b.get_fitness() > a.get_fitness():
+	elif b._fitness > a._fitness:
 		child._genes.extend(disjoint_b)
 	else:
 		for d in (disjoint_a + disjoint_b):
@@ -127,7 +127,7 @@ class Genome(object):
 		"""Randomly mutate the genome to initiate variation."""
 		if self.is_disabled():
 			self.add_enabled()
-			
+
 		rand = random.uniform(0, 1)
 		if rand < 0.3:
 			self.add_node()
@@ -271,7 +271,7 @@ class Brain(object):
 	"""Base class for a 'brain' that learns through the evolution
 	of a population of genomes.
 	"""
-	def __init__(self, inputs, outputs,	population=100,  max_fitness=-1, max_generations=-1, delta_threshold=0.5, cull_percent=0.75):
+	def __init__(self, inputs, outputs,	population=100,  max_fitness=-1, max_generations=-1, delta_threshold=3, cull_percent=0.75):
 		self._inputs = inputs
 		self._outputs = outputs
 		self._edges = [] # Edge database (INPUT, OUTPUT)
@@ -319,6 +319,7 @@ class Brain(object):
 
 	def update_fitness(self):
 		"""Update the adjusted fitness values of each genome."""
+		self._fitness_sums = []
 		for s in self._species:
 			if self.get_population() == len(s):
 				sh = 1
@@ -326,13 +327,13 @@ class Brain(object):
 				sh = self.get_population()-len(s)
 
 			for g in s:
-				g.adjusted_fitness = g.get_fitness()/float(sh)
+				g._adjusted_fitness = g._fitness/float(sh)
 
-			self._fitness_sums.append(sum([g.adjusted_fitness for g in s]))
+			self._fitness_sums.append(sum([g._adjusted_fitness for g in s]))
 
 	def update_fittest(self):
 		"""Update the highest fitness score of the whole population."""
-		best = [max(s, key=lambda g: g.get_fitness()).get_fitness() for s in self._species]
+		best = [max(s, key=lambda g: g._fitness)._fitness for s in self._species]
 		
 		if max(best) > self._global_max_fitness:
 			self._global_max_fitness = max(best)
@@ -374,6 +375,7 @@ class Brain(object):
 			for i, s in enumerate(self._species):
 				ratio = self._fitness_sums[i]/global_fitness_sum
 				offspring = math.floor(ratio * (self._population-self.get_population()))
+				
 				for j in range(int(offspring)):
 					children.append(self.breed(s))
 
@@ -385,15 +387,17 @@ class Brain(object):
 	def cull_genomes(self, fittest_only):
 		"""Exterminate the weakest genomes per specie."""
 		for i, s in enumerate(self._species):
-			s.sort(key=lambda g: g.get_fitness())
-
 			if fittest_only:
 				# Only keep the winning genome
 				remaining = len(s)-1
 			else:
 				# Keep top 25%
 				remaining = int(math.ceil(self._cull_percent*len(s)))
-			self._species[i] = s[remaining-1:]
+
+			culled = sorted(s, key=lambda g: g._fitness)[remaining-1:]
+			new_rep = min(culled, key=lambda g: genomic_distance(g, s[0]))
+
+			self._species[i] = [new_rep]+[i for i in culled if i != new_rep]
 
 	def should_evolve(self):
 		"""Determine if the system should continue to evolve
