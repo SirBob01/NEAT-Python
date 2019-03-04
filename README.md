@@ -16,6 +16,10 @@ This implementation is a modified version of the algorithm written in Python.
 
 None. This is written in pure Python. :)
 
+# Installation
+
+To install via pip, simply enter `pip install git+https://github.com/SirBob01/NEAT-Python.git` on the command prompt (Windows).
+
 # Basic Usage
 
 Import the NEAT module.
