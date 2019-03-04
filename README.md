@@ -18,7 +18,7 @@ None. This is written in pure Python. :)
 
 # Installation
 
-To install via pip, simply enter `pip install git+https://github.com/SirBob01/NEAT-Python.git` on the command prompt (Windows).
+To install via pip, simply enter `pip install git+https://github.com/SirBob01/NEAT-Python.git` on the command prompt.
 
 # Basic Usage
 
