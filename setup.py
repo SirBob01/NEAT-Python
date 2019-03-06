@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='NEAT-Python',
-	  version='2.2',
+	  version='1.0',
 	  description='NEAT (NeuroEvolution of Augmenting Topologies) algorithm implementation',
 	  license='BSD',
 	  author='Keith Leonardo',

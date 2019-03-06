@@ -13,4 +13,4 @@ problems.
 """
 __all__ = ['neat']
 
-__version__ = 'BETA 2.2'
+__version__ = '1.0'
