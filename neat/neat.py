@@ -7,6 +7,16 @@ import itertools
 def sigmoid(x):
 	"""Return the S-Curve activation of x."""
 	return 1/(1+math.exp(-x))
+def tanh(x):
+	"""Return the tanh actiavtion of x."""
+	return (math.exp(2*x)+1)/(math.exp(x*2)-1)
+
+def LReLU(x):
+	"""Leaky ReLU function for x"""
+	if x>=0:
+		return x
+	else:
+		return 0.01 * x
 
 def genomic_distance(a, b):
 	"""Calculate the genomic distance between two genomes."""
@@ -26,8 +36,8 @@ def genomic_distance(a, b):
 	return len(disjoint)/N + weight_diff/len(matching)
 
 def genomic_crossover(a, b):
-	"""Breed two genomes and return the child. Matching genes 
-	are inherited randomly, while disjoint genes are inherited 
+	"""Breed two genomes and return the child. Matching genes
+	are inherited randomly, while disjoint genes are inherited
 	from the fitter parent.
 	"""
 	a_in = set([i[0] for i in a._genes])
@@ -79,10 +89,10 @@ class Genome(object):
 		# Performance
 		self._fitness = 0
 		self._adjusted_fitness = 0
-	
+
 	def generate(self):
-		"""Generate the neural network of this genome with minimal 
-		initial topology, i.e. (no hidden nodes). Call on genome 
+		"""Generate the neural network of this genome with minimal
+		initial topology, i.e. (no hidden nodes). Call on genome
 		creation.
 		"""
 		# Minimum initial topology
@@ -93,8 +103,8 @@ class Genome(object):
 
 		self.reset()
 
-	def forward(self, inputs):
-		"""Evaluate inputs and calculate the outputs of the 
+	def forward(self, inputs, acitvation=sigmoid):
+		"""Evaluate inputs and calculate the outputs of the
 		neural network via the forward propagation algorithm.
 		"""
 		if len(inputs) < self._inputs:
@@ -106,11 +116,11 @@ class Genome(object):
 
 		# Iterate through edges and perform forward propagation algorithm
 		# Node Sort: INPUT -> HIDDEN -> OUTPUT (exclude INPUT though)
-		nodes = itertools.chain(range(self._unhidden, self._max_node), 
+		nodes = itertools.chain(range(self._unhidden, self._max_node),
 								range(self._inputs, self._unhidden))
 		for n in nodes:
 			total = 0
-			# OUTPUT = sigmoid(sum(weight*INPUT))
+			# OUTPUT = activation(sum(weight*INPUT))
 			for gene in self._genes:
 				(__in, __out) = self._innovations[gene[0]]
 				weight = gene[1]
@@ -119,7 +129,7 @@ class Genome(object):
 					# Add all incoming connections to this node * their weights
 					total += weight * self._activations[__in-1]
 
-			self._activations[n] = sigmoid(total)
+			self._activations[n] = activation(total)
 
 		return [self._activations[n-1] for n in range(1, self._max_node+1) if self.is_output(n)]
 
@@ -142,8 +152,8 @@ class Genome(object):
 
 		self.reset()
 
-	def add_node(self):	
-		"""Add a new node between a randomly selected edge, 
+	def add_node(self):
+		"""Add a new node between a randomly selected edge,
 		disabling the parent edge.
 		"""
 		self._max_node += 1
@@ -172,7 +182,7 @@ class Genome(object):
 	def add_enabled(self):
 		"""Re-enable a random disabled gene."""
 		disabled = [g for g in self._genes if not g[2]]
-		
+
 		if len(disabled) > 0:
 			random.choice(disabled)[2] = True
 
@@ -207,7 +217,7 @@ class Genome(object):
 		"""
 		i = random.choice([n for n in range(1, self._max_node+1) if not self.is_output(n)])
 		j_list = [n for n in range(1, self._max_node+1) if not self.is_input(n) and n > i]
-		
+
 		if len(j_list) == 0:
 			self.add_node()
 			j = self._max_node
@@ -258,7 +268,7 @@ class Genome(object):
 		self._fitness = 0
 
 	def clone(self):
-		"""Return a clone of the genome, maintaining internal 
+		"""Return a clone of the genome, maintaining internal
 		reference to global innovation database.
 		"""
 		# DON'T FORGET TO UPDATE INTERNAL REFERENCES TO OTHER OBJECTS WHEN CLONING
@@ -300,7 +310,7 @@ class Brain(object):
 			self.classify_genome(g)
 
 	def classify_genome(self, genome):
-		"""Classify genomes into species via the genomic 
+		"""Classify genomes into species via the genomic
 		distance algorithm.
 		"""
 		if len(self._species) == 0:
@@ -333,8 +343,8 @@ class Brain(object):
 
 	def update_fittest(self):
 		"""Update the highest fitness score of the whole population."""
-		best = [max(s, key=lambda g: g._fitness)._fitness for s in self._species]
-		
+		best = [max(s, key=g._fitness)._fitness for s in self._species]
+
 		if max(best) > self._global_max_fitness:
 			self._global_max_fitness = max(best)
 
@@ -370,12 +380,12 @@ class Brain(object):
 			# 1. Eliminate lowest performing genomes per specie
 			# 2. Repopulate
 			self.cull_genomes(False)
-			
+
 			children = []
 			for i, s in enumerate(self._species):
 				ratio = self._fitness_sums[i]/global_fitness_sum
 				offspring = math.floor(ratio * (self._population-self.get_population()))
-				
+
 				for j in range(int(offspring)):
 					children.append(self.breed(s))
 
@@ -404,7 +414,7 @@ class Brain(object):
 		based on the maximum fitness and generation count.
 		"""
 		self.update_fittest()
-		fit = self._global_max_fitness != self._max_fitness 
+		fit = self._global_max_fitness != self._max_fitness
 		end = self._generation != self._max_generations
 
 		return fit and end
