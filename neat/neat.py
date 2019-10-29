@@ -7,6 +7,7 @@ import itertools
 def sigmoid(x):
 	"""Return the S-Curve activation of x."""
 	return 1/(1+math.exp(-x))
+
 def tanh(x):
 	"""Return the tanh actiavtion of x."""
 	return (math.exp(2*x)+1)/(math.exp(x*2)-1)
