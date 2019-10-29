@@ -5,7 +5,7 @@ gradually breeds and mutates the best genomes (neural
 networks) with the highest fitness or performance scores 
 over the course of generations.
 
-	http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
+    http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
 
 This is a Python implementation of the algorithm for 
 use in simulations, games, or general machine learning 
