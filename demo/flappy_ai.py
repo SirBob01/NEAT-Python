@@ -6,8 +6,7 @@ import os
 import random
 import pygame
 from pygame.locals import *
-import NEAT as neat
-
+from neat import neat
 
 # Constants
 WIDTH, HEIGHT = 640, 480
