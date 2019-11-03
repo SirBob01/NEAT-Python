@@ -9,6 +9,7 @@ def sigmoid(x):
     return 1/(1+np.exp(-x))
 
 def tanh(x):
+    """Wrapper function for hyperbolic tangent activation."""
     return np.tanh(x)
 
 def LReLU(x):
@@ -343,7 +344,9 @@ class Brain(object):
 
     def update_fittest(self):
         """Update the highest fitness score of the whole population."""
-        best = [max(s, key=g._fitness)._fitness for s in self._species]
+        best = []
+        for s in self._species:
+            best.append(max(s, key=lambda g: g._fitness)._fitness)
 
         if max(best) > self._global_max_fitness:
             self._global_max_fitness = max(best)
