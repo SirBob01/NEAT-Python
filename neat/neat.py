@@ -8,7 +8,7 @@ def sigmoid(x):
     """Return the S-Curve activation of x."""
     return 1/(1+np.exp(-x))
 
-def activation(x):
+def tanh(x):
     return np.tanh(x)
 
 def LReLU(x):
@@ -103,7 +103,7 @@ class Genome(object):
 
         self.reset()
 
-    def forward(self, inputs, acitvation=sigmoid):
+    def forward(self, inputs, activation=sigmoid):
         """Evaluate inputs and calculate the outputs of the
         neural network via the forward propagation algorithm.
         """
