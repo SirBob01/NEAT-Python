@@ -14,7 +14,7 @@ This implementation is a modified version of the algorithm written in Python.
 
 # Dependencies
 
-None. This is written in pure Python. :)
+numpy.
 
 # Installation
 
