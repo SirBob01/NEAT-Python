@@ -2,15 +2,15 @@ import random
 import pickle
 import copy
 import itertools
-import numpy as np
+import math
 
 def sigmoid(x):
     """Return the S-Curve activation of x."""
-    return 1/(1+np.exp(-x))
+    return 1/(1+math.exp(-x))
 
 def tanh(x):
     """Wrapper function for hyperbolic tangent activation."""
-    return np.tanh(x)
+    return math.tanh(x)
 
 def LReLU(x):
     """Leaky ReLU function for x"""
@@ -387,7 +387,7 @@ class Brain(object):
             children = []
             for i, s in enumerate(self._species):
                 ratio = self._fitness_sums[i]/global_fitness_sum
-                offspring = np.floor(ratio * (self._population-self.get_population()))
+                offspring = math.floor(ratio * (self._population-self.get_population()))
 
                 for j in range(int(offspring)):
                     children.append(self.breed(s))
@@ -405,7 +405,7 @@ class Brain(object):
                 remaining = len(s)-1
             else:
                 # Keep top 25%
-                remaining = int(np.ceil(self._cull_percent*len(s)))
+                remaining = int(math.ceil(self._cull_percent*len(s)))
 
             culled = sorted(s, key=lambda g: g._fitness)[remaining-1:]
             new_rep = min(culled, key=lambda g: genomic_distance(g, s[0]))
