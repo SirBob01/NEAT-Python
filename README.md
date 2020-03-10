@@ -10,7 +10,9 @@ developed by Ken Stanley that applies genetic algorithms to machine learning.
 
 This implementation is a modified version of the algorithm written in Python.
 
-[Here](http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf) is the original paper.
+[Here](http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf) is the original paper. Below is an animation of the flappy_ai.py demo script.
+
+<img src="./media/flappy_ai.gif" alt="Flappy AI" width="500"/>
 
 # Dependencies
 
