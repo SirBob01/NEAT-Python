@@ -108,7 +108,7 @@ class Genome(object):
         """Evaluate inputs and calculate the outputs of the
         neural network via the forward propagation algorithm.
         """
-        if len(inputs) < self._inputs:
+        if len(inputs) != self._inputs:
             raise ValueError("Incorrect number of inputs.")
 
         # Set input activations
