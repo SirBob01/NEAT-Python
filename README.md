@@ -1,7 +1,7 @@
 # NEAT-Python
 
-NEAT (NeuroEvolution of Augmenting Topologies) is a _genetic algorithm_ 
-developed by Ken Stanley that applies genetic algorithms to machine learning.
+NEAT (NeuroEvolution of Augmenting Topologies) is an algorithm 
+developed by Ken Stanley that applies _genetic algorithms_ to machine learning.
 
 1. Generates a population of genomes (neural networks)
 2. Groups genomes into species based on their _genomic distances_
@@ -10,19 +10,19 @@ developed by Ken Stanley that applies genetic algorithms to machine learning.
 
 This implementation is a modified version of the algorithm written in Python.
 
-[Here](http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf) is the original paper. Below is an animation of the flappy_ai.py demo script.
+[Here](http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf) is the original paper. Below is an animation of the `flappy_ai.py` demo script.
 
 <img src="./media/flappy_ai.gif" alt="Flappy AI" width="500"/>
 
-# Dependencies
+## Dependencies
 
 None. Just the standard Python libraries.
 
-# Installation
+## Installation
 
-To install via pip, simply enter `pip install git+https://github.com/SirBob01/NEAT-Python.git` on the command prompt.
+To install via pip, simply enter `pip install git+https://github.com/SirBob01/NEAT-Python.git` on the console.
 
-# Basic Usage
+## Basic Usage
 
 Import the NEAT module.
 ```py
@@ -58,6 +58,12 @@ loaded_brain = neat.Brain.load('filename') # Static method
 
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
-# TODO
-- Modify the mutation probabilities (perhaps allow custom probabilities)
+## TODO
+- Modify the mutation probabilities (perhaps allow custom probabilities?)
 - Fine tune population parameters, such as the delta threshold
+
+## License
+
+Code and documentation Copyright (c) 2018-2020 Keith Leonardo
+
+Code released under the [BSD 3 License](https://choosealicense.com/licenses/bsd-3-clause/).
