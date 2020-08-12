@@ -1,3 +1,4 @@
+import os
 from neat import neat
 
 def fitness(expected, output):
@@ -9,9 +10,12 @@ def fitness(expected, output):
 
 
 def main():
-    brain = neat.Brain(2, 1, population=100, max_generations=100000)
-    brain.generate()
-
+    if os.path.isfile('xor.neat'):
+        brain = neat.Brain.load('xor')
+    else:
+        brain = neat.Brain(2, 1, population=100, max_generations=1000)
+        brain.generate()
+    
     print("Training...")
     while brain.should_evolve():
         genome = brain.get_current()
@@ -25,13 +29,18 @@ def main():
         brain.next_iteration()
 
         if fit > brain.get_fittest():
-            print(fit)
+            # Values should progressively approach [0, 1, 1, 0]
+            print("[{:.3f} {:.3f} {:.3f} {:.3f}] | Acc.: {:.2f}% | Gen.: {:d}".format(
+                f1, f2, f3, f4, (fit * 100.0), brain.get_generation())
+            )
+
+        brain.save('xor')
 
 
-    print(genome.forward([0.0, 0.0])) # 0
-    print(genome.forward([1.0, 0.0])) # 1
-    print(genome.forward([0.0, 1.0])) # 1
-    print(genome.forward([1.0, 1.0])) # 0
+    print("0 ^ 0 = ", genome.forward([0.0, 0.0])) # 0
+    print("1 ^ 0 = ", genome.forward([1.0, 0.0])) # 1
+    print("0 ^ 1 = ", genome.forward([0.0, 1.0])) # 1
+    print("1 ^ 1 = ", genome.forward([1.0, 1.0])) # 0
 
 if __name__ == "__main__":
     main()
