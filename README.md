@@ -59,6 +59,7 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
+- Keep track of fitness history for each specie and exterminate stagnating ones
 - Modify the mutation probabilities (perhaps allow custom probabilities?)
 - Fine tune population parameters, such as the delta threshold
 
