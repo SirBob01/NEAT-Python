@@ -213,7 +213,6 @@ class Genome(object):
         1. i < j
         2. i is not an output
         3. j is not an input
-
         Ensures a directed acyclic graph (DAG).
         """
         i = random.choice([n for n in range(1, self._max_node+1) if not self.is_output(n)])
@@ -300,8 +299,9 @@ class Brain(object):
         self._current_genome = 0
 
         self._max_fitness = max_fitness
-        self._global_max_fitness = 0
         self._fitness_sums = []
+
+        self._global_best = None
 
     def generate(self):
         """Generate the initial population of genomes."""
@@ -309,6 +309,9 @@ class Brain(object):
             g = Genome(self._inputs, self._outputs, self._edges)
             g.generate()
             self.classify_genome(g)
+        
+        # Set the initial best genome
+        self._global_best = self._species[0][0]
 
     def classify_genome(self, genome):
         """Classify genomes into species via the genomic
@@ -344,12 +347,15 @@ class Brain(object):
 
     def update_fittest(self):
         """Update the highest fitness score of the whole population."""
-        best = []
+        best_per_specie = []
         for s in self._species:
-            best.append(max(s, key=lambda g: g._fitness)._fitness)
+            best_per_specie.append(max(s, key=lambda g: g._fitness))
 
-        if max(best) > self._global_max_fitness:
-            self._global_max_fitness = max(best)
+        best_in_generation = max(best_per_specie, key=lambda g: g._fitness)
+        self._global_best = max(
+            [best_in_generation, self._global_best],
+            key=lambda g: g._fitness
+        )
 
     def breed(self, specie):
         """Return a child as a result of either a mutated clone
@@ -417,10 +423,10 @@ class Brain(object):
         based on the maximum fitness and generation count.
         """
         self.update_fittest()
-        fit = self._global_max_fitness != self._max_fitness
+        fit = self._global_best._fitness <= self._max_fitness
         end = self._generation != self._max_generations
 
-        return fit and end
+        return (fit or self._max_fitness == -1) and end
 
     def next_iteration(self):
         """Call after every evaluation of individual genomes to
@@ -439,8 +445,8 @@ class Brain(object):
                 self._current_genome = 0
 
     def get_fittest(self):
-        """Get the highest fitness score of the whole population."""
-        return self._global_max_fitness
+        """Return the genome with the highest global fitness score."""
+        return self._global_best
 
     def get_population(self):
         """Return the true (calculated) population size."""
