@@ -228,7 +228,7 @@ def main():
                                             brain.get_current_species()+1, 
                                             brain.get_current_genome()+1,
                                             timer,
-                                            brain.get_fittest(),
+                                            brain.get_fittest().get_fitness(),
                                             round(output, 3),
                                             [round(i, 3) for i in inputs]
         ))

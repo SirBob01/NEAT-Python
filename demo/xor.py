@@ -16,7 +16,11 @@ def main():
         brain = neat.Brain(2, 1, population=100, max_generations=1000)
         brain.generate()
     
-    print("Training...")
+    if brain.should_evolve():
+        print("Training...")
+    else:
+        print("Final model...")
+
     while brain.should_evolve():
         genome = brain.get_current()
         f1 = genome.forward([0.0, 0.0])[0]
@@ -28,7 +32,7 @@ def main():
         genome.set_fitness(fit)
         brain.next_iteration()
 
-        if fit > brain.get_fittest():
+        if fit > brain.get_fittest().get_fitness():
             # Values should progressively approach [0, 1, 1, 0]
             print("[{:.3f} {:.3f} {:.3f} {:.3f}] | Acc.: {:.2f}% | Gen.: {:d}".format(
                 f1, f2, f3, f4, (fit * 100.0), brain.get_generation())
@@ -36,11 +40,12 @@ def main():
 
         brain.save('xor')
 
-
-    print("0 ^ 0 = ", genome.forward([0.0, 0.0])) # 0
-    print("1 ^ 0 = ", genome.forward([1.0, 0.0])) # 1
-    print("0 ^ 1 = ", genome.forward([0.0, 1.0])) # 1
-    print("1 ^ 1 = ", genome.forward([1.0, 1.0])) # 0
+    best = brain.get_fittest()
+    print("Accuracy: {:.2f}%".format(best.get_fitness() * 100))
+    print("0 ^ 0 = {:.3f}".format(best.forward([0.0, 0.0])[0]))
+    print("1 ^ 0 = {:.3f}".format(best.forward([1.0, 0.0])[0]))
+    print("0 ^ 1 = {:.3f}".format(best.forward([0.0, 1.0])[0]))
+    print("1 ^ 1 = {:.3f}".format(best.forward([1.0, 1.0])[0]))
 
 if __name__ == "__main__":
     main()
