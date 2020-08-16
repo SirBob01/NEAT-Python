@@ -277,6 +277,56 @@ class Genome(object):
         return clone
 
 
+class Specie(object):
+    """A specie represents a set of genomes whose genomic distances 
+    between them fall under the Brain's delta threshold.
+    """
+    def __init__(self, max_history, *members):
+        self._members = list(members)
+        self._max_history = max_history
+
+        self._fitness_history = []
+        self._fitness_sum = 0
+
+    def include(self, genome):
+        """Add a new genome to the specie."""
+        self._members.append(genome)
+
+    def breed(self):
+        """Return a child as a result of either a mutated clone
+        or crossover between two parent genomes.
+        """
+        # Either mutate a clone or breed two random genomes
+        if random.uniform(0, 1) < 0.4 or len(self._members) == 1:
+            child = random.choice(self._members).clone()
+            child.mutate()
+        else:
+            mom = random.choice(self._members)
+            dad = random.choice([i for i in self._members if i != mom])
+            child = genomic_crossover(mom, dad)
+
+        return child
+
+    def cull_genomes(self, fittest_only):
+        """Exterminate the weakest genomes per specie."""
+        if fittest_only:
+            # Only keep the winning genome
+            remaining = len(self._members)-1
+        else:
+            # Keep top 25%
+            remaining = int(math.ceil(0.75*len(self._members)))
+
+        self._members.sort(key=lambda g: g._fitness)
+        culled = self._members[remaining-1:]
+        new_rep = min(culled, key=lambda g: genomic_distance(g, self._members[0]))
+
+        self._members = [new_rep]+[i for i in culled if i != new_rep]
+
+    def get_best(self):
+        """Get the member with the highest fitness score."""
+        return max(self._members, key=lambda g: g._fitness)
+
+
 class Brain(object):
     """Base class for a 'brain' that learns through the evolution
     of a population of genomes.
@@ -299,7 +349,6 @@ class Brain(object):
         self._current_genome = 0
 
         self._max_fitness = max_fitness
-        self._fitness_sums = []
 
         self._global_best = None
 
@@ -311,7 +360,7 @@ class Brain(object):
             self.classify_genome(g)
         
         # Set the initial best genome
-        self._global_best = self._species[0][0]
+        self._global_best = self._species[0]._members[0]
 
     def classify_genome(self, genome):
         """Classify genomes into species via the genomic
@@ -319,58 +368,42 @@ class Brain(object):
         """
         if len(self._species) == 0:
             # Empty population
-            self._species.append([genome])
+            self._species.append(Specie(5, genome))
         else:
             # Compare genome against representative s[0] in each specie
             for s in self._species:
-                rep =  s[0]
+                rep =  s._members[0]
                 if genomic_distance(genome, rep) < self._delta_threshold:
-                    s.append(genome)
+                    s.include(genome)
                     return
 
             # Doesn't fit with any other specie, create a new one
-            self._species.append([genome])
+            self._species.append(Specie(5, genome))
 
     def update_fitness(self):
         """Update the adjusted fitness values of each genome."""
-        self._fitness_sums = []
         for s in self._species:
-            if self.get_population() == len(s):
+            if self.get_population() == len(s._members):
                 sh = 1
             else:
-                sh = self.get_population()-len(s)
+                sh = self.get_population()-len(s._members)
 
-            for g in s:
+            for g in s._members:
                 g._adjusted_fitness = g._fitness/float(sh)
 
-            self._fitness_sums.append(sum([g._adjusted_fitness for g in s]))
+            s._fitness_sum = sum([g._adjusted_fitness for g in s._members])
 
     def update_fittest(self):
         """Update the highest fitness score of the whole population."""
         best_per_specie = []
         for s in self._species:
-            best_per_specie.append(max(s, key=lambda g: g._fitness))
+            best_per_specie.append(s.get_best())
 
         best_in_generation = max(best_per_specie, key=lambda g: g._fitness)
         self._global_best = max(
             [best_in_generation, self._global_best],
             key=lambda g: g._fitness
-        )
-
-    def breed(self, specie):
-        """Return a child as a result of either a mutated clone
-        or crossover between two parent genomes.
-        """
-        # Either mutate a clone or breed two random genomes
-        if random.uniform(0, 1) < 0.4 or len(specie) == 1:
-            child = random.choice(specie).clone()
-            child.mutate()
-        else:
-            mom = random.choice(specie)
-            dad = random.choice([i for i in specie if i != mom])
-            child = genomic_crossover(mom, dad)
-
-        return child
+        ).clone()
 
     def evolve(self):
         """Evolve the population by eliminating the poorest performing
@@ -378,45 +411,32 @@ class Brain(object):
         the most promising species.
         """
         self.update_fitness()
-        global_fitness_sum = float(sum(self._fitness_sums))
+        global_fitness_sum = 0
+        for s in self._species:
+            global_fitness_sum += s._fitness_sum
 
         if global_fitness_sum == 0:
             # No progress, mutate everybody
             for s in self._species:
-                for g in s:
+                for g in s._members:
                     g.mutate()
         else:
             # 1. Eliminate lowest performing genomes per specie
             # 2. Repopulate
-            self.cull_genomes(False)
+            for s in self._species:
+                s.cull_genomes(False)
 
             children = []
             for i, s in enumerate(self._species):
-                ratio = self._fitness_sums[i]/global_fitness_sum
+                ratio = s._fitness_sum/global_fitness_sum
                 offspring = math.floor(ratio * (self._population-self.get_population()))
-
                 for j in range(int(offspring)):
-                    children.append(self.breed(s))
+                    children.append(s.breed())
 
             for g in children:
                 self.classify_genome(g)
 
         self._generation += 1
-
-    def cull_genomes(self, fittest_only):
-        """Exterminate the weakest genomes per specie."""
-        for i, s in enumerate(self._species):
-            if fittest_only:
-                # Only keep the winning genome
-                remaining = len(s)-1
-            else:
-                # Keep top 25%
-                remaining = int(math.ceil(self._cull_percent*len(s)))
-
-            culled = sorted(s, key=lambda g: g._fitness)[remaining-1:]
-            new_rep = min(culled, key=lambda g: genomic_distance(g, s[0]))
-
-            self._species[i] = [new_rep]+[i for i in culled if i != new_rep]
 
     def should_evolve(self):
         """Determine if the system should continue to evolve
@@ -432,7 +452,8 @@ class Brain(object):
         """Call after every evaluation of individual genomes to
         progress training.
         """
-        if self._current_genome < len(self._species[self._current_species])-1:
+        s = self._species[self._current_species]
+        if self._current_genome < len(s._members)-1:
             self._current_genome += 1
         else:
             if self._current_species < len(self._species)-1:
@@ -450,11 +471,12 @@ class Brain(object):
 
     def get_population(self):
         """Return the true (calculated) population size."""
-        return sum([len(s) for s in self._species])
+        return sum([len(s._members) for s in self._species])
 
     def get_current(self):
         """Get the current genome for evaluation."""
-        return self._species[self._current_species][self._current_genome]
+        s = self._species[self._current_species]
+        return s._members[self._current_genome]
 
     def get_current_species(self):
         """Get index of current species being evaluated."""
