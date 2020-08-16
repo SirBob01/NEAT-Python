@@ -331,7 +331,7 @@ class Brain(object):
     """Base class for a 'brain' that learns through the evolution
     of a population of genomes.
     """
-    def __init__(self, inputs, outputs, population=100, max_fitness=-1, max_generations=-1, delta_threshold=3, cull_percent=0.75):
+    def __init__(self, inputs, outputs, population=100, max_fitness=-1, max_generations=-1, delta_threshold=3):
         self._inputs = inputs
         self._outputs = outputs
         self._edges = [] # Edge database (INPUT, OUTPUT)
@@ -340,7 +340,6 @@ class Brain(object):
         self._population = population
 
         self._delta_threshold = delta_threshold
-        self._cull_percent = cull_percent
 
         self._generation = 0
         self._max_generations = max_generations
