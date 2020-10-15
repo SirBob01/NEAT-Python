@@ -274,6 +274,7 @@ class Genome(object):
         # DON'T FORGET TO UPDATE INTERNAL REFERENCES TO OTHER OBJECTS WHEN CLONING
         clone = copy.deepcopy(self)
         clone._innovations = self._innovations
+        clone._activations = [0 for i in range(clone._max_node)]
         return clone
 
 
@@ -394,15 +395,11 @@ class Brain(object):
 
     def update_fittest(self):
         """Update the highest fitness score of the whole population."""
-        best_per_specie = []
-        for s in self._species:
-            best_per_specie.append(s.get_best())
+        top_performers = [s.get_best() for s in self._species]
+        current_top = max(top_performers, key=lambda g: g._fitness)
 
-        best_in_generation = max(best_per_specie, key=lambda g: g._fitness)
-        self._global_best = max(
-            [best_in_generation, self._global_best],
-            key=lambda g: g._fitness
-        ).clone()
+        if current_top._fitness > self._global_best._fitness:
+            self._global_best = current_top.clone()
 
     def evolve(self):
         """Evolve the population by eliminating the poorest performing
