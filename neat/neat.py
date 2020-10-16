@@ -19,10 +19,10 @@ def LReLU(x):
     else:
         return 0.01 * x
 
-def genomic_distance(a, b):
+def genomic_distance(a, b, c1, c2):
     """Calculate the genomic distance between two genomes."""
-    a_in = set([i[0] for i in a._genes])
-    b_in = set([i[0] for i in b._genes])
+    a_in = set(a._genes)
+    b_in = set(b._genes)
 
     # Does not distinguish between disjoint and excess
     matching = a_in & b_in
@@ -30,19 +30,18 @@ def genomic_distance(a, b):
     N = len(max(a_in, b_in, key=len))
 
     weight_diff = 0
-    for i in range(len(matching)):
-        if a._genes[i][0] in matching:
-            weight_diff += abs(a._genes[i][1]-b._genes[i][1])
+    for i in matching:
+        weight_diff += abs(a._genes[i].weight - b._genes[i].weight)
 
-    return len(disjoint)/N + weight_diff/len(matching)
+    return c1 * len(disjoint)/N + c2 * weight_diff/len(matching)
 
 def genomic_crossover(a, b):
     """Breed two genomes and return the child. Matching genes
     are inherited randomly, while disjoint genes are inherited
     from the fitter parent.
     """
-    a_in = set([i[0] for i in a._genes])
-    b_in = set([i[0] for i in b._genes])
+    a_in = set(a._genes)
+    b_in = set(b._genes)
 
     # Template genome for child
     child = Genome(a._inputs, a._outputs, a._innovations)
@@ -50,26 +49,48 @@ def genomic_crossover(a, b):
     # Inherit homologous gene from a random parent
     for i in a_in & b_in:
         parent = random.choice([a, b])
-        for g in parent._genes:
-            if g[0] == i:
-                child._genes.append(g)
+        child._genes[i] = copy.deepcopy(parent._genes[i])
 
     # Inherit disjoint/excess genes from fitter parent
-    disjoint_a = [i for i in a._genes if i[0] in a_in - b_in]
-    disjoint_b = [i for i in b._genes if i[0] in b_in - a_in]
+    # If fitnesses are the same, inherit genes from a random parent
+    disjoint_a = {}
+    disjoint_b = {}
+    for i in a_in - b_in:
+        disjoint_a[i] = copy.deepcopy(a._genes[i])
+    for i in b_in - a_in:
+        disjoint_b[i] = copy.deepcopy(b._genes[i])
 
     if a._fitness > b._fitness:
-        child._genes.extend(disjoint_a)
+        child._genes.update(disjoint_a)
     elif b._fitness > a._fitness:
-        child._genes.extend(disjoint_b)
+        child._genes.update(disjoint_b)
     else:
-        for d in (disjoint_a + disjoint_b):
-            if random.uniform(0, 1) > 0.5:
-                child._genes.append(d)
+        if random.uniform(0, 1) < 0.5:
+            child._genes.update(disjoint_a)
+        else:
+            child._genes.update(disjoint_b)
 
     child._max_node = max(itertools.chain.from_iterable(child.get_edges()))
     child.reset()
     return child
+
+
+class Hyperparameters(object):
+    """Hyperparameter settings for the Brain object."""
+    delta_threshold = 3
+    c1 = 1.0
+    c2 = 1.0
+
+    max_fitness = -1
+    max_generations = -1
+    max_fitness_history = 15
+
+
+class Gene(object):
+    """A gene object representing an edge in the neural network."""
+    def __init__(self, weight):
+        self.weight = weight
+        self.enabled = True
 
 
 class Genome(object):
@@ -84,7 +105,7 @@ class Genome(object):
         self._activations = []
 
         # Structure
-        self._genes = [] # (innovation number, weight, enabled)
+        self._genes = {} # (innovation number : Gene)
         self._innovations = innovations
 
         # Performance
@@ -123,12 +144,10 @@ class Genome(object):
             total = 0
             # OUTPUT = activation(sum(weight*INPUT))
             for gene in self._genes:
-                (__in, __out) = self._innovations[gene[0]]
-                weight = gene[1]
-                enabled = gene[2]
-                if n+1 == __out and enabled:
+                (__in, __out) = self._innovations[gene]
+                if n+1 == __out and self._genes[gene].enabled:
                     # Add all incoming connections to this node * their weights
-                    total += weight * self._activations[__in-1]
+                    total += self._genes[gene].weight * self._activations[__in-1]
 
             self._activations[n] = activation(total)
 
@@ -140,9 +159,9 @@ class Genome(object):
             self.add_enabled()
 
         rand = random.uniform(0, 1)
-        if rand < 0.3:
+        if rand < 0.03:
             self.add_node()
-        elif 0.3 <= rand < 0.8:
+        elif 0.03 <= rand < 0.08:
             pair = self.random_pair()
             if pair not in self.get_edges():
                 self.add_edge(*pair)
@@ -158,13 +177,13 @@ class Genome(object):
         disabling the parent edge.
         """
         self._max_node += 1
-        enabled = [g for g in self._genes if g[2]]
-        gene = random.choice(enabled)
-        gene[2] = False # Disable the gene
-        (i, j) = self._innovations[gene[0]]
+        enabled = [i for i in self._genes if self._genes[i].enabled]
+        i = random.choice(enabled)
+        self._genes[i].enabled = False
+        (__in, __out) = self._innovations[i]
 
-        self.add_edge(i, self._max_node)
-        self.add_edge(self._max_node, j)
+        self.add_edge(__in, self._max_node)
+        self.add_edge(self._max_node, __out)
 
     def add_edge(self, i, j):
         """Add a new connection between existing nodes."""
@@ -178,35 +197,26 @@ class Genome(object):
 
         # Update this genome's genes
         inv = self._innovations.index((i, j))
-        self._genes.append([inv, random.uniform(0, 1)*random.choice([-1, 1]), True])
+        self._genes[inv] = Gene(random.uniform(0, 1)*random.choice([-1, 1]))
 
     def add_enabled(self):
         """Re-enable a random disabled gene."""
-        disabled = [g for g in self._genes if not g[2]]
+        disabled = [i for i in self._genes if not self._genes[i].enabled]
 
         if len(disabled) > 0:
-            random.choice(disabled)[2] = True
+            self._genes[random.choice(disabled)].enabled = True
 
     def shift_weight(self):
         """Randomly shift, perturb, or set one of the edge weights."""
         # Shift a randomly selected weight
-        gene = random.choice(self._genes)
+        i = random.choice(list(self._genes.keys()))
         rand = random.uniform(0, 1)
-        if rand <= 0.2:
+        if rand <= 0.9:
             # Perturb
-            gene[1] += 0.1*random.choice([-1, 1])
-        elif 0.2 < rand <= 0.5:
+            self._genes[i].weight += random.uniform(0, 1)*random.choice([-1, 1])
+        else:
             # New random value
-            gene[1] = random.uniform(0, 1)*random.choice([-1, 1])
-        else:
-            # Reflect
-            gene[1] *= -1
-
-        # Keep within [-1.0, 1.0]
-        if gene[1] < 0:
-            gene[1] = max(-1.0, gene[1])
-        else:
-            gene[1] = min(1.0, gene[1])
+            self._genes[i].weight = random.uniform(0, 1)*random.choice([-1, 1])
 
     def random_pair(self):
         """Generate random nodes (i, j) such that:
@@ -236,14 +246,14 @@ class Genome(object):
 
     def is_disabled(self):
         """Determine if all of its genes are disabled."""
-        return all(g[2] == False for g in self._genes)
+        return all(self._genes[i].enabled == False for i in self._genes)
 
     def get_fitness(self):
         """Return the fitness of the genome."""
         return self._fitness
 
     def get_genes(self):
-        """Return this genome's genes (innovation number, weight, enabled)."""
+        """Return this genome's genes (innovation number : Gene)."""
         return self._genes
 
     def get_innovations(self):
@@ -256,7 +266,7 @@ class Genome(object):
 
     def get_edges(self):
         """Generate the network's edges given its innovation numbers."""
-        return [self._innovations[g[0]] for g in self._genes]
+        return [self._innovations[i] for i in self._genes]
 
     def set_fitness(self, score):
         """Set the fitness score of this genome."""
@@ -282,23 +292,17 @@ class Specie(object):
     """A specie represents a set of genomes whose genomic distances 
     between them fall under the Brain's delta threshold.
     """
-    def __init__(self, max_history, *members):
+    def __init__(self, *members):
         self._members = list(members)
-        self._max_history = max_history
-
         self._fitness_history = []
         self._fitness_sum = 0
-
-    def include(self, genome):
-        """Add a new genome to the specie."""
-        self._members.append(genome)
 
     def breed(self):
         """Return a child as a result of either a mutated clone
         or crossover between two parent genomes.
         """
         # Either mutate a clone or breed two random genomes
-        if random.uniform(0, 1) < 0.4 or len(self._members) == 1:
+        if random.uniform(0, 1) < 0.25 or len(self._members) == 1:
             child = random.choice(self._members).clone()
             child.mutate()
         else:
@@ -310,18 +314,15 @@ class Specie(object):
 
     def cull_genomes(self, fittest_only):
         """Exterminate the weakest genomes per specie."""
+        self._members.sort(key=lambda g: g._fitness)
         if fittest_only:
             # Only keep the winning genome
             remaining = len(self._members)-1
         else:
-            # Keep top 25%
-            remaining = int(math.ceil(0.75*len(self._members)))
+            # Keep top 50%
+            remaining = int(math.ceil(0.5*len(self._members)))
 
-        self._members.sort(key=lambda g: g._fitness)
-        culled = self._members[remaining-1:]
-        new_rep = min(culled, key=lambda g: genomic_distance(g, self._members[0]))
-
-        self._members = [new_rep]+[i for i in culled if i != new_rep]
+        self._members = self._members[remaining-1:]
 
     def get_best(self):
         """Get the member with the highest fitness score."""
@@ -332,7 +333,7 @@ class Brain(object):
     """Base class for a 'brain' that learns through the evolution
     of a population of genomes.
     """
-    def __init__(self, inputs, outputs, population=100, max_fitness=-1, max_generations=-1, delta_threshold=3):
+    def __init__(self, inputs, outputs, population=100, hyperparams=Hyperparameters()):
         self._inputs = inputs
         self._outputs = outputs
         self._edges = [] # Edge database (INPUT, OUTPUT)
@@ -340,15 +341,19 @@ class Brain(object):
         self._species = []
         self._population = population
 
-        self._delta_threshold = delta_threshold
+        # Hyper-parameters
+        self._delta_threshold = hyperparams.delta_threshold
+        self._max_fitness_history = hyperparams.max_fitness_history
+        self._c1 = hyperparams.c1
+        self._c2 = hyperparams.c2
 
         self._generation = 0
-        self._max_generations = max_generations
+        self._max_generations = hyperparams.max_generations
 
         self._current_species = 0
         self._current_genome = 0
 
-        self._max_fitness = max_fitness
+        self._max_fitness = hyperparams.max_fitness
 
         self._global_best = None
 
@@ -368,30 +373,28 @@ class Brain(object):
         """
         if len(self._species) == 0:
             # Empty population
-            self._species.append(Specie(5, genome))
+            self._species.append(Specie(genome))
         else:
             # Compare genome against representative s[0] in each specie
             for s in self._species:
                 rep =  s._members[0]
-                if genomic_distance(genome, rep) < self._delta_threshold:
-                    s.include(genome)
+                if genomic_distance(genome, rep, self._c1, self._c2) < self._delta_threshold:
+                    s._members.append(genome)
                     return
 
             # Doesn't fit with any other specie, create a new one
-            self._species.append(Specie(5, genome))
+            self._species.append(Specie(genome))
 
     def update_fitness(self):
         """Update the adjusted fitness values of each genome."""
         for s in self._species:
-            if self.get_population() == len(s._members):
-                sh = 1
-            else:
-                sh = self.get_population()-len(s._members)
-
             for g in s._members:
-                g._adjusted_fitness = g._fitness/float(sh)
+                g._adjusted_fitness = g._fitness/len(s._members)
 
             s._fitness_sum = sum([g._adjusted_fitness for g in s._members])
+            s._fitness_history.append(s._fitness_sum)
+            if len(s._fitness_history) > self._max_fitness_history:
+                s._fitness_history.pop(0)
 
     def update_fittest(self):
         """Update the highest fitness score of the whole population."""
@@ -414,14 +417,27 @@ class Brain(object):
         if global_fitness_sum == 0:
             # No progress, mutate everybody
             for s in self._species:
-                for g in s._members:
-                    g.mutate()
+                if len(s._members) < 5:
+                    for g in s._members:
+                        g.mutate()
+                else:
+                    for g in s._members[1:]:
+                        g.mutate()
         else:
-            # 1. Eliminate lowest performing genomes per specie
-            # 2. Repopulate
+            # Only keep the species with potential to improve
+            surviving_species = []
+            for s in self._species:
+                if len(s._fitness_history) < self._max_fitness_history:
+                    surviving_species.append(s)
+                elif s._fitness_history[-1] - s._fitness_history[0] > 0.01:
+                    surviving_species.append(s)
+            self._species = surviving_species
+
+            # Eliminate lowest performing genomes per specie
             for s in self._species:
                 s.cull_genomes(False)
 
+            # Repopulate
             children = []
             for i, s in enumerate(self._species):
                 ratio = s._fitness_sum/global_fitness_sum
@@ -431,6 +447,13 @@ class Brain(object):
 
             for g in children:
                 self.classify_genome(g)
+
+            # No species survived, repopulate based on fittest genome
+            if len(self._species) == 0:
+                for i in range(self._population):
+                    g = self._global_best.clone()
+                    g.mutate()
+                    self.classify_genome(g)
 
         self._generation += 1
 
