@@ -29,9 +29,18 @@ Import the NEAT module.
 from neat import neat
 ```
 
+Set the hyperparameters of the model. See the source code for the complete list
+of tweakable values.
+```py
+hp = neat.Hyperparameters()
+hp.max_generations = 100
+hp.c2 = 0.4
+```
+
 Generate the genomic population of a new brain, denoting the number of inputs and outputs respectively, as well as its population count, for its base parameters.
 ```py
-brain = neat.Brain(3, 2, population=100) # Takes 3 inputs, produces 2 outputs
+# Takes 3 inputs, produces 2 outputs
+brain = neat.Brain(3, 2, population=100, hyperparams=hp)
 brain.generate()
 ```
 
@@ -59,9 +68,7 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
-- Keep track of fitness history for each specie and exterminate stagnating ones
-- Modify the mutation probabilities (perhaps allow custom probabilities?)
-- Fine tune population parameters, such as the delta threshold
+- Add mutation probabilities and other constant values to Hyperparameter object
 
 ## License
 
