@@ -110,13 +110,14 @@ def generate_net(current, nodes):
 
 def render_net(current, display, nodes):
     # Render the current neural network
-    for j in current.get_genes():
-        if j[2]: # Enabled or disabled edge
+    genes = current.get_genes()
+    for i in genes:
+        if genes[i].enabled: # Enabled or disabled edge
             color = (0, 255, 0)
         else:
             color = (255, 0, 0)
 
-        points = current.get_innovations()[j[0]]
+        points = current.get_innovations()[i]
         pygame.draw.line(display, color, nodes[points[0]-1][0], nodes[points[1]-1][0], 3)
 
     for n in nodes:

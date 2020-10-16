@@ -10,7 +10,10 @@ def fitness(expected, output):
 
 
 def main():
-    brain = neat.Brain(2, 1, population=150, max_generations=300)
+    hyperparams = neat.Hyperparameters()
+    hyperparams.max_generations = 300
+
+    brain = neat.Brain(2, 1, 150, hyperparams)
     brain.generate()
     
     print("Training...")
