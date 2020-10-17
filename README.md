@@ -59,6 +59,8 @@ The brain's `.should_evolve()` function determines whether or not to continue ev
 
 A genome's `.forward()` function takes a list of input values and produces a list of output values. These outputs may be evaluated by a fitness function and the fitness score of this current genome may be updated via the genome's `.set_fitness()` method.
 
+To grab a clone of the best performing genome in the population, use the brain's `.get_fittest()` function.
+
 A brain and all its neural networks can be saved to disk and loaded. Files are automatically read and saved as `.neat` files.
 ```py
 brain.save('filename')
