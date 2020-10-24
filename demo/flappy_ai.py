@@ -36,8 +36,8 @@ class Bird:
         self.jump = False
 
     def draw(self, surf):
-        pygame.draw.rect(surf, WHITE, ((self.pos[0]-self.dim[0]/2, self.pos[1]-self.dim[1]/2), 
-                                       (self.dim[0], self.dim[1])))
+        center_pos = (int(self.pos[0]-self.dim[0]//2), int(self.pos[1]-self.dim[1]//2))
+        pygame.draw.rect(surf, WHITE, (center_pos, self.dim))
 
     def update(self):
         if self.vel[1] < self.terminal_vel:
@@ -70,8 +70,8 @@ class Pipe:
         self.alive = True
 
     def draw(self, surf):
-        pygame.draw.rect(surf, YELLOW, ((self.pos[0]-self.dim[0]/2, self.pos[1]-self.dim[1]/2), 
-                                        (self.dim[0], self.dim[1])))
+        center_pos = (int(self.pos[0]-self.dim[0]//2), int(self.pos[1]-self.dim[1]//2))
+        pygame.draw.rect(surf, YELLOW, (center_pos, self.dim))
 
     def update(self):
         self.pos[0] += self.vel[0]
