@@ -44,24 +44,38 @@ brain = neat.Brain(3, 2, population=100, hyperparams=hp)
 brain.generate()
 ```
 
-In evaluating the genomes of a brain, you may use the following format:
+Training genomes can be done in two ways. The first way is via manual iteration:
 ```py
 while brain.should_evolve():
     genome = brain.get_current()
     output = genome.forward([0.3, 0.1, 0.25])
-    
-    genome.set_fitness(some_function(output))
+
+    genome.set_fitness(score(output)) # score() returns a numerical fitness value
     
     brain.next_iteration() # Next genome to be evaluated
 ```
 
-The brain's `.should_evolve()` function determines whether or not to continue evaluating genomes based on the maximum number of generations or fitness score to be achieved.
+The second way is to use NEAT-Python's multiprocessing functionality.
+```py
+def score(genome, some_arg, some_kwarg=None):
+    """Calculate the fitness of this genome."""
+    output = genome.forward([0.3, 0.1, 0.25])
+    example_fitness = sum(output)
+    
+    print(some_arg, some_kwarg)
+    return example_fitness
+    
+while brain.should_evolve():
+    brain.evaluate_parallel(score, 3, some_kwarg="Hello!") # 3, Hello!
+```
+
+For both methods, the brain's `.should_evolve()` function determines whether or not to continue evaluating genomes based on the maximum number of generations or fitness score to be achieved.
 
 A genome's `.forward()` function takes a list of input values and produces a list of output values. These outputs may be evaluated by a fitness function and the fitness score of this current genome may be updated via the genome's `.set_fitness()` method.
 
 To grab a clone of the best performing genome in the population, use the brain's `.get_fittest()` function.
 
-A brain and all its neural networks can be saved to disk and loaded. Files are automatically read and saved as `.neat` files.
+Finally, a brain and all its neural networks can be saved to disk and loaded. Files are automatically read and saved as `.neat` files.
 ```py
 brain.save('filename')
 loaded_brain = neat.Brain.load('filename') # Static method
@@ -70,7 +84,6 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
-- Allow multithreaded access to the genomes of each generation (faster training)
 - Add mutation probabilities and other constant values to Hyperparameter object
 
 ## License

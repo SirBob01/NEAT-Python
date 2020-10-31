@@ -3,6 +3,7 @@ import pickle
 import copy
 import itertools
 import math
+import multiprocessing as mp
 
 def sigmoid(x):
     """Return the S-Curve activation of x."""
@@ -483,6 +484,32 @@ class Brain(object):
                 self.evolve()
                 self._current_species = 0
                 self._current_genome = 0
+
+    def evaluate_parallel(self, evaluator, *args, **kwargs):
+        """Evaluate the entire population on separate processes
+        to progress training. The evaluator function must take a Genome
+        as its first parameter and return a numerical fitness score.
+
+        Any global state passed to the evaluator is copied and will not
+        be modified at the parent process.
+        """
+        max_proc = mp.cpu_count()
+        pool = mp.Pool(processes=max_proc)
+        
+        results = {}
+        for i in range(len(self._species)):
+            for j in range(len(self._species[i]._members)):
+                results[(i, j)] = pool.apply_async(
+                    evaluator, 
+                    args=[self._species[i]._members[j]]+list(args), 
+                    kwds=kwargs
+                )
+
+        for key in results:
+            genome = self._species[key[0]]._members[key[1]]
+            genome.set_fitness(results[key].get())
+
+        self.evolve()
 
     def get_fittest(self):
         """Return the genome with the highest global fitness score."""

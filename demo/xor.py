@@ -8,6 +8,12 @@ def fitness(expected, output):
         s += (expected[i] - output[i])**2
     return 1-s
 
+def evaluate(genome):
+    f1 = genome.forward([0.0, 0.0])[0]
+    f2 = genome.forward([1.0, 0.0])[0]
+    f3 = genome.forward([0.0, 1.0])[0]
+    f4 = genome.forward([1.0, 1.0])[0]
+    return fitness([0.0, 1.0, 1.0, 0.0], [f1, f2, f3, f4])
 
 def main():
     hyperparams = neat.Hyperparameters()
@@ -17,27 +23,17 @@ def main():
     brain.generate()
     
     print("Training...")
-    last_gen = None
     while brain.should_evolve():
-        genome = brain.get_current()
-
-        f1 = genome.forward([0.0, 0.0])[0]
-        f2 = genome.forward([1.0, 0.0])[0]
-        f3 = genome.forward([0.0, 1.0])[0]
-        f4 = genome.forward([1.0, 1.0])[0]
-        genome.set_fitness(fitness([0.0, 1.0, 1.0, 0.0], [f1, f2, f3, f4]))
+        brain.evaluate_parallel(evaluate)
 
         # Print training progress
         current_gen = brain.get_generation()
-        if last_gen != current_gen:
-            current_best = brain.get_fittest()
-            print("Current Accuracy: {:.2f}% | Generation {}/{}".format(
-                current_best.get_fitness() * 100, 
-                current_gen + 1, 
-                brain._max_generations
-            ))
-            last_gen = current_gen
-        brain.next_iteration()
+        current_best = brain.get_fittest()
+        print("Current Accuracy: {:.2f}% | Generation {}/{}".format(
+            current_best.get_fitness() * 100, 
+            current_gen, 
+            brain._max_generations
+        ))
 
     best = brain.get_fittest()
     f1 = best.forward([0.0, 0.0])[0]
