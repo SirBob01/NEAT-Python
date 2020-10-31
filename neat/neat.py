@@ -493,7 +493,7 @@ class Brain(object):
         Any global state passed to the evaluator is copied and will not
         be modified at the parent process.
         """
-        max_proc = mp.cpu_count()
+        max_proc = max(mp.cpu_count()-1, 1)
         pool = mp.Pool(processes=max_proc)
         
         results = {}
@@ -509,6 +509,8 @@ class Brain(object):
             genome = self._species[key[0]]._members[key[1]]
             genome.set_fitness(results[key].get())
 
+        pool.close()
+        pool.join()
         self.evolve()
 
     def get_fittest(self):
