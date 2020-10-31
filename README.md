@@ -70,6 +70,7 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
+- Allow multithreaded access to the genomes of each generation (faster training)
 - Add mutation probabilities and other constant values to Hyperparameter object
 
 ## License
