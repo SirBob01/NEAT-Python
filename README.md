@@ -84,6 +84,7 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
+- Add a mutable bias node and activation for each node excluding the output layer
 - Add mutation probabilities and other constant values to Hyperparameter object
 
 ## License
