@@ -91,6 +91,7 @@ class Gene(object):
     """A gene object representing an edge in the neural network."""
     def __init__(self, weight):
         self.weight = weight
+        self.bias = 0
         self.enabled = True
 
 
@@ -142,15 +143,18 @@ class Genome(object):
         nodes = itertools.chain(range(self._unhidden, self._max_node),
                                 range(self._inputs, self._unhidden))
         for n in nodes:
-            total = 0
-            # OUTPUT = activation(sum(weight*INPUT))
+            # Sum of the bias values of a node's incoming edges
+            bias = 0
+            ax = 0
             for gene in self._genes:
                 (__in, __out) = self._innovations[gene]
                 if n+1 == __out and self._genes[gene].enabled:
                     # Add all incoming connections to this node * their weights
-                    total += self._genes[gene].weight * self._activations[__in-1]
+                    ax += self._genes[gene].weight * self._activations[__in-1]
+                    bias += self._genes[gene].bias
 
-            self._activations[n] = activation(total)
+            # OUTPUT = activation(sum(weight*INPUT) + bias)
+            self._activations[n] = activation(ax + bias)
 
         return [self._activations[n-1] for n in range(1, self._max_node+1) if self.is_output(n)]
 
@@ -162,12 +166,14 @@ class Genome(object):
         rand = random.uniform(0, 1)
         if rand < 0.03:
             self.add_node()
-        elif 0.03 <= rand < 0.08:
+        elif 0.03 <= rand < 0.06:
             pair = self.random_pair()
             if pair not in self.get_edges():
                 self.add_edge(*pair)
             else:
                 self.shift_weight()
+        elif 0.06 <= rand < 0.08:
+            self.shift_bias()
         else:
             self.shift_weight()
 
@@ -218,6 +224,17 @@ class Genome(object):
         else:
             # New random value
             self._genes[i].weight = random.uniform(0, 1)*random.choice([-1, 1])
+
+    def shift_bias(self):
+        """Randomly shift, perturb, or set the bias of an incoming edge."""
+        i = random.choice(list(self._genes.keys()))
+        rand = random.uniform(0, 1)
+        if rand <= 0.9:
+            # Perturb
+            self._genes[i].bias += random.uniform(0, 1)*random.choice([-1, 1])
+        else:
+            # New random value
+            self._genes[i].bias = random.uniform(0, 1)*random.choice([-1, 1])
 
     def random_pair(self):
         """Generate random nodes (i, j) such that:
