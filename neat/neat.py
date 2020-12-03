@@ -20,7 +20,7 @@ def LReLU(x):
     else:
         return 0.01 * x
 
-def genomic_distance(a, b, c1, c2):
+def genomic_distance(a, b, distance_weights):
     """Calculate the genomic distance between two genomes."""
     a_in = set(a._genes)
     b_in = set(b._genes)
@@ -34,7 +34,14 @@ def genomic_distance(a, b, c1, c2):
     for i in matching:
         weight_diff += abs(a._genes[i].weight - b._genes[i].weight)
 
-    return c1 * len(disjoint)/N + c2 * weight_diff/len(matching)
+    bias_diff = 0
+    for i in matching:
+        bias_diff += abs(a._genes[i].bias - b._genes[i].bias)
+
+    t1 = distance_weights['disjoint'] * len(disjoint)/N
+    t2 = distance_weights['weight'] * weight_diff/len(matching)
+    t3 = distance_weights['bias'] * bias_diff/len(matching)
+    return t1 + t2 + t3
 
 def genomic_crossover(a, b):
     """Breed two genomes and return the child. Matching genes
@@ -45,7 +52,7 @@ def genomic_crossover(a, b):
     b_in = set(b._genes)
 
     # Template genome for child
-    child = Genome(a._inputs, a._outputs, a._innovations)
+    child = Genome(a._inputs, a._outputs, a._mutation, a._innovations)
 
     # Inherit homologous gene from a random parent
     for i in a_in & b_in:
@@ -78,13 +85,25 @@ def genomic_crossover(a, b):
 
 class Hyperparameters(object):
     """Hyperparameter settings for the Brain object."""
-    delta_threshold = 3
-    c1 = 1.0
-    c2 = 1.0
+    delta_threshold = 1.5
+    distance_weights = {
+        'disjoint' : 1.0,
+        'weight' : 1.0,
+        'bias' : 1.0
+    }
 
     max_fitness = -1
     max_generations = -1
     max_fitness_history = 15
+
+    mutation_probabilities = {
+        'node' : 0.04,
+        'edge' : 0.06,
+        'weight_perturb' : 0.4,
+        'weight_set' : 0.1,
+        'bias_perturb' : 0.3,
+        'bias_set' : 0.1
+    }
 
 
 class Gene(object):
@@ -97,7 +116,7 @@ class Gene(object):
 
 class Genome(object):
     """Base class for a standard genome used by the NEAT algorithm."""
-    def __init__(self, inputs, outputs, innovations=[]):
+    def __init__(self, inputs, outputs, mutation={}, innovations=[]):
         # Nodes
         self._inputs = inputs
         self._outputs = outputs
@@ -109,6 +128,9 @@ class Genome(object):
         # Structure
         self._genes = {} # (innovation number : Gene)
         self._innovations = innovations
+
+        # Probabilities for mutation
+        self._mutation = mutation
 
         # Performance
         self._fitness = 0
@@ -156,26 +178,29 @@ class Genome(object):
             # OUTPUT = activation(sum(weight*INPUT) + bias)
             self._activations[n] = activation(ax + bias)
 
-        return [self._activations[n-1] for n in range(1, self._max_node+1) if self.is_output(n)]
+        return [self._activations[n-1] for n in range(self._inputs+1, self._unhidden+1)]
 
     def mutate(self):
         """Randomly mutate the genome to initiate variation."""
         if self.is_disabled():
             self.add_enabled()
 
-        rand = random.uniform(0, 1)
-        if rand < 0.03:
+        population = list(self._mutation.keys())
+        probabilities= [self._mutation[k] for k in population]
+        choice = random.choices(population, weights=probabilities)[0]
+
+        if choice == "node":
             self.add_node()
-        elif 0.03 <= rand < 0.06:
+        elif choice == "edge":
             pair = self.random_pair()
             if pair not in self.get_edges():
                 self.add_edge(*pair)
             else:
-                self.shift_weight()
-        elif 0.06 <= rand < 0.08:
-            self.shift_bias()
-        else:
-            self.shift_weight()
+                self.shift_weight("weight_perturb")
+        elif choice == "weight_perturb" or choice == "weight_set":
+            self.shift_weight(choice)
+        elif choice == "bias_perturb" or choice == "bias_set":
+            self.shift_bias(choice)
 
         self.reset()
 
@@ -213,27 +238,21 @@ class Genome(object):
         if len(disabled) > 0:
             self._genes[random.choice(disabled)].enabled = True
 
-    def shift_weight(self):
+    def shift_weight(self, type):
         """Randomly shift, perturb, or set one of the edge weights."""
         # Shift a randomly selected weight
         i = random.choice(list(self._genes.keys()))
-        rand = random.uniform(0, 1)
-        if rand <= 0.9:
-            # Perturb
+        if type == "weight_perturb":
             self._genes[i].weight += random.uniform(0, 1)*random.choice([-1, 1])
-        else:
-            # New random value
+        elif type == "weight_set":
             self._genes[i].weight = random.uniform(0, 1)*random.choice([-1, 1])
 
-    def shift_bias(self):
+    def shift_bias(self, type):
         """Randomly shift, perturb, or set the bias of an incoming edge."""
         i = random.choice(list(self._genes.keys()))
-        rand = random.uniform(0, 1)
-        if rand <= 0.9:
-            # Perturb
+        if type == "bias_perturb":
             self._genes[i].bias += random.uniform(0, 1)*random.choice([-1, 1])
-        else:
-            # New random value
+        elif type == "bias_set":
             self._genes[i].bias = random.uniform(0, 1)*random.choice([-1, 1])
 
     def random_pair(self):
@@ -362,8 +381,11 @@ class Brain(object):
         # Hyper-parameters
         self._delta_threshold = hyperparams.delta_threshold
         self._max_fitness_history = hyperparams.max_fitness_history
-        self._c1 = hyperparams.c1
-        self._c2 = hyperparams.c2
+        self._distance_weights = hyperparams.distance_weights
+        self._mutation = hyperparams.mutation_probabilities
+
+        if sum(self._mutation.values()) > 1.0:
+            raise ValueError("Mutation probability sum must be <= 1.0")
 
         self._generation = 0
         self._max_generations = hyperparams.max_generations
@@ -378,7 +400,7 @@ class Brain(object):
     def generate(self):
         """Generate the initial population of genomes."""
         for i in range(self._population):
-            g = Genome(self._inputs, self._outputs, self._edges)
+            g = Genome(self._inputs, self._outputs, self._mutation, self._edges)
             g.generate()
             self.classify_genome(g)
         
@@ -396,7 +418,7 @@ class Brain(object):
             # Compare genome against representative s[0] in each specie
             for s in self._species:
                 rep =  s._members[0]
-                if genomic_distance(genome, rep, self._c1, self._c2) < self._delta_threshold:
+                if genomic_distance(genome, rep, self._distance_weights) < self._delta_threshold:
                     s._members.append(genome)
                     return
 
