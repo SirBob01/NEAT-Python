@@ -34,7 +34,8 @@ of tweakable values.
 ```py
 hp = neat.Hyperparameters()
 hp.max_generations = 100
-hp.c2 = 0.4
+hp.distance_weights["bias"] = 0.4
+hp.mutation_probabilities["weight_perturb"] = 0.3
 ```
 
 Generate the genomic population of a new brain, denoting the number of inputs and outputs respectively, as well as its population count, for its base parameters.
@@ -84,8 +85,7 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
-- Add a mutable bias node and activation for each node excluding the output layer
-- Add mutation probabilities and other constant values to Hyperparameter object
+- Fix speciation and repopulation bug
 
 ## License
 
