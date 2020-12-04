@@ -85,6 +85,8 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
+- Refactor code to make nodes a mutatable gene
+- Implement better algorithm for feedforward evaluation of genomes
 - Fix speciation and repopulation bug
 
 ## License
