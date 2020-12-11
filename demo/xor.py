@@ -44,6 +44,20 @@ def main():
     f4 = best.forward([1.0, 1.0])[0]
     fit = fitness([0.0, 1.0, 1.0, 0.0], [f1, f2, f3, f4])
 
+    edges = best.get_edges()
+    graph = {}
+    for (i, j) in edges:
+        if not edges[(i, j)].enabled:
+            continue
+        if i not in graph:
+            graph[i] = []
+        graph[i].append(j)
+
+    print()
+    print(f"Best network structure: {best._max_node} nodes")
+    for k in graph:
+        print(f"{k} - {graph[k]}")
+    print()
     print("Accuracy: {:.2f}%".format(fit * 100))
     print("0 ^ 0 = {:.3f}".format(f1))
     print("1 ^ 0 = {:.3f}".format(f2))
