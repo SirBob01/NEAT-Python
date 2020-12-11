@@ -1,14 +1,16 @@
 import os
+import math
 from neat import neat
 
 def fitness(expected, output):
-    """Fitness is calculated as 1 - sum of (expected - output)**2"""
+    """Calculates the similarity score between expected and output."""
     s = 0
     for i in range(4):
         s += (expected[i] - output[i])**2
-    return 1-s
+    return 1/(1 + math.sqrt(s))
 
 def evaluate(genome):
+    """Evaluates the current genome."""
     f1 = genome.forward([0.0, 0.0])[0]
     f2 = genome.forward([1.0, 0.0])[0]
     f3 = genome.forward([0.0, 1.0])[0]
@@ -32,7 +34,7 @@ def main():
         print("Current Accuracy: {:.2f}% | Generation {}/{}".format(
             current_best.get_fitness() * 100, 
             current_gen, 
-            brain._max_generations
+            hyperparams.max_generations
         ))
 
     best = brain.get_fittest()

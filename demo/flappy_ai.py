@@ -93,7 +93,7 @@ def generate_pipes(pipes):
 
 def generate_net(current, nodes):
     # Generate the neural network to be displayed
-    for i in range(1, current.get_nodes()+1):
+    for i in current.get_nodes():
         if current.is_input(i):
             color = (0, 0, 255)
             x = 50
@@ -106,22 +106,21 @@ def generate_net(current, nodes):
             color = (0, 0, 0)
             x = random.randint(NETWORK_WIDTH/3, int(NETWORK_WIDTH * (2.0/3)))
             y = random.randint(20, HEIGHT-20)
-        nodes.append([(int(x), int(y)), color])
+        nodes[i] = [(int(x), int(y)), color]
 
 def render_net(current, display, nodes):
     # Render the current neural network
-    genes = current.get_genes()
-    for i in genes:
-        if genes[i].enabled: # Enabled or disabled edge
+    genes = current.get_edges()
+    for edge in genes:
+        if genes[edge].enabled: # Enabled or disabled edge
             color = (0, 255, 0)
         else:
             color = (255, 0, 0)
 
-        points = current.get_innovations()[i]
-        pygame.draw.line(display, color, nodes[points[0]-1][0], nodes[points[1]-1][0], 3)
+        pygame.draw.line(display, color, nodes[edge[0]][0], nodes[edge[1]][0], 3)
 
     for n in nodes:
-        pygame.draw.circle(display, n[1], n[0], 7)
+        pygame.draw.circle(display, nodes[n][1], nodes[n][0], 7)
 
 def main():
     # Main game function
@@ -140,13 +139,19 @@ def main():
     if os.path.isfile('flappy_bird.neat'):
         brain = neat.Brain.load('flappy_bird')
     else:
-        brain = neat.Brain(4, 1)
+        hyperparams = neat.Hyperparameters()
+        hyperparams.delta_threshold = 0.75
+
+        hyperparams.mutation_probabilities['node'] = 0.05
+        hyperparams.mutation_probabilities['edge'] = 0.05
+
+        brain = neat.Brain(4, 1, 100, hyperparams)
         brain.generate()
 
     current = brain.get_current()
     inputs = [0, 0, 0, 0]
     output = 0
-    nodes = []
+    nodes = {}
 
     player = Bird(WIDTH/4, HEIGHT/2)
     generate_net(current, nodes)
@@ -179,7 +184,7 @@ def main():
         else:
             timer = 0
             pipes = []
-            nodes = []
+            nodes = {}
 
             if AI:
                 # Save the bird's brain

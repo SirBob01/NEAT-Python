@@ -4,7 +4,7 @@ NEAT (NeuroEvolution of Augmenting Topologies) is an algorithm
 developed by Ken Stanley that applies _genetic algorithms_ to machine learning.
 
 1. Generates a population of genomes (neural networks)
-2. Groups genomes into species based on their _genomic distances_
+2. Clusters genomes into species based on their _genomic distances_
 3. Evaluates the _fitness score_ of each genome
 4. Breeds and mutates the best genomes over the course of generations
 
@@ -85,9 +85,9 @@ loaded_brain = neat.Brain.load('filename') # Static method
 Read NEAT's doc-strings for more information on the module's classes and methods.
 
 ## TODO
-- Refactor code to make nodes a mutatable gene
-- Implement better algorithm for feedforward evaluation of genomes
-- Fix speciation and repopulation bug
+- Implement interspecies sexual crossover
+- Fix bugs in repopulation algorithm
+- Allow mutable activation functions for each node (heterogeneous activations)
 
 ## License
 
