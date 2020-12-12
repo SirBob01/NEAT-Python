@@ -54,7 +54,7 @@ def main():
         graph[i].append(j)
 
     print()
-    print(f"Best network structure: {best._max_node} nodes")
+    print(f"Best network structure: {best.get_num_nodes()} nodes")
     for k in graph:
         print(f"{k} - {graph[k]}")
     print()

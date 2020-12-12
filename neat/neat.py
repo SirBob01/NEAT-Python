@@ -310,11 +310,15 @@ class Genome(object):
 
     def get_nodes(self):
         """Get the nodes of the network."""
-        return self._nodes
+        return self._nodes.copy()
 
     def get_edges(self):
         """Get the network's edges."""
-        return self._edges
+        return self._edges.copy()
+
+    def get_num_nodes(self):
+        """Get the number of nodes in the network."""
+        return self._max_node
 
     def set_fitness(self, score):
         """Set the fitness score of this genome."""
