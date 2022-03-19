@@ -83,7 +83,7 @@ class Pipe:
 
 
 def generate_pipes(pipes):
-    # Generate a new random pair of pipes to the world
+    """Generate a column of pipes for the bird to fly through"""
     y = random.randint(150, HEIGHT-150)
     th = 150
 
@@ -91,14 +91,14 @@ def generate_pipes(pipes):
     p2 = Pipe(WIDTH, y+(th/2+HEIGHT/2))
     pipes.extend([p1, p2])
 
-def generate_net(current, nodes):
-    # Generate the neural network to be displayed
-    for i in current.get_nodes():
-        if current.is_input(i):
+def generate_visualized_network(genome, nodes):
+    """Generate the positions/colors of the neural network nodes"""
+    for i in genome.get_nodes():
+        if genome.is_input(i):
             color = (0, 0, 255)
             x = 50
             y = 140 + i*60
-        elif current.is_output(i):
+        elif genome.is_output(i):
             color = (255, 0, 0)
             x = NETWORK_WIDTH-50
             y = HEIGHT/2
@@ -108,22 +108,21 @@ def generate_net(current, nodes):
             y = random.randint(20, HEIGHT-20)
         nodes[i] = [(int(x), int(y)), color]
 
-def render_net(current, display, nodes):
-    # Render the current neural network
-    genes = current.get_edges()
+def render_visualized_network(genome, nodes, display):
+    """Render the visualized neural network"""
+    genes = genome.get_edges()
     for edge in genes:
         if genes[edge].enabled: # Enabled or disabled edge
             color = (0, 255, 0)
         else:
             color = (255, 0, 0)
-
+            
         pygame.draw.line(display, color, nodes[edge[0]][0], nodes[edge[1]][0], 3)
 
     for n in nodes:
         pygame.draw.circle(display, nodes[n][1], nodes[n][0], 7)
 
 def main():
-    # Main game function
     pygame.init()
 
     display = pygame.display.set_mode((WIDTH+NETWORK_WIDTH, HEIGHT), 0, 32)
@@ -132,6 +131,7 @@ def main():
     clock = pygame.time.Clock()
     timer = 0
 
+    player = Bird(WIDTH/4, HEIGHT/2)
     pipes = []
     ahead = []
 
@@ -148,20 +148,16 @@ def main():
         brain = neat.Brain(4, 1, 100, hyperparams)
         brain.generate()
 
-    current = brain.get_current()
     inputs = [0, 0, 0, 0]
     output = 0
     nodes = {}
-
-    player = Bird(WIDTH/4, HEIGHT/2)
-    generate_net(current, nodes)
+    generate_visualized_network(brain.get_current(), nodes)
 
     while True:
-        # Main loop
         display.fill(BLACK)
         network_display.fill(WHITE)
 
-        # Game logic
+        # Simulation logic
         if player.alive:
             player.draw(display)
             player.update()
@@ -179,27 +175,22 @@ def main():
                 else:
                     pipes.remove(p)
 
+            # Player height kill-barrier
             if player.pos[1] >= HEIGHT-player.dim[1]/2 or player.pos[1] <= 0:
                 player.kill()
         else:
             timer = 0
             pipes = []
-            nodes = {}
+            player = Bird(WIDTH/4, HEIGHT/2)
 
             if AI:
                 # Save the bird's brain
                 brain.save('flappy_bird')
                 brain.next_iteration()
-                current = brain.get_current()
+                nodes = {}
+                generate_visualized_network(brain.get_current(), nodes)
 
-                # Restart the game
-                generate_net(current, nodes)
-                player = Bird(WIDTH/4, HEIGHT/2)
-
-            else:
-                player = Bird(WIDTH/4, HEIGHT/2)
-
-        # Training brain
+        # Train the neural network
         if AI:
             ahead = [p for p in pipes if p.pos[0]-player.pos[0] >= 0][:2]
             if len(ahead) > 0:
@@ -212,14 +203,15 @@ def main():
                 inputs = [0, player.pos[1]/HEIGHT, 0, 0]
 
             if brain.should_evolve():
-                output = current.forward(inputs)[0]
+                genome = brain.get_current()
+                output = genome.forward(inputs)[0]
+                genome.set_fitness(timer)
                 player.jump = (output <= 0.5)
-                current.set_fitness(timer)
 
                 if DRAW_NETWORK:
-                    render_net(current, network_display, nodes)
+                    render_visualized_network(genome, nodes, network_display)
 
-        # Handle events
+        # Handle user events events
         for e in pygame.event.get():
             if e.type == QUIT:
                 sys.exit()
@@ -241,7 +233,7 @@ def main():
         pygame.display.update()
 
         # Uncomment this to cap the framerate
-        # clock.tick(100)
+        clock.tick(100)
 
 if __name__ == "__main__":
     main()
